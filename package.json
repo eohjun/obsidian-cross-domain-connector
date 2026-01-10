@@ -1,0 +1,26 @@
+{
+  "name": "obsidian-cross-domain-connector",
+  "version": "0.1.0",
+  "description": "Discover serendipitous connections between notes in different domains",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "typecheck": "tsc -noEmit -skipLibCheck"
+  },
+  "keywords": [
+    "obsidian",
+    "pkm",
+    "cross-domain",
+    "serendipity",
+    "embeddings"
+  ],
+  "author": "eohjun",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "esbuild": "^0.24.2",
+    "obsidian": "latest",
+    "typescript": "^5.7.3"
+  }
+}
