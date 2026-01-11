@@ -98,6 +98,17 @@ export const PROVIDER_MODELS: Record<AIProvider, ModelOption[]> = {
 };
 
 // =============================================================================
+// Cache Types
+// =============================================================================
+
+import type { CrossDomainConnection } from './core/domain/entities/cross-domain-connection';
+
+export interface SerendipityCache {
+  connections: CrossDomainConnection[];
+  timestamp: number;
+}
+
+// =============================================================================
 // Utility Functions
 // =============================================================================
 

@@ -9,6 +9,7 @@ import { getConnectionTypeLabel } from '../core/domain/entities/cross-domain-con
 import { generateNoteId } from '../core/domain/utils/note-id';
 import type { DiscoverConnectionsUseCase } from '../core/application/use-cases/discover-connections';
 import type { GenerateAnalogyUseCase } from '../core/application/use-cases/generate-analogy';
+import type CrossDomainConnectorPlugin from '../main';
 import { SerendipityModal } from './serendipity-modal';
 
 export const VIEW_TYPE_CDC = 'cross-domain-connector-view';
@@ -19,6 +20,7 @@ export class CDCMainView extends ItemView {
 
   constructor(
     leaf: WorkspaceLeaf,
+    private plugin: CrossDomainConnectorPlugin,
     private discoverUseCase: DiscoverConnectionsUseCase,
     private analogyUseCase: GenerateAnalogyUseCase | null
   ) {
@@ -212,7 +214,13 @@ export class CDCMainView extends ItemView {
   /**
    * Serendipity 모드 열기
    */
-  private openSerendipityMode(): void {
-    new SerendipityModal(this.app, this.discoverUseCase, this.analogyUseCase).open();
+  private async openSerendipityMode(): Promise<void> {
+    const modal = new SerendipityModal(
+      this.app,
+      this.plugin,
+      this.discoverUseCase,
+      this.analogyUseCase
+    );
+    modal.open();
   }
 }

@@ -65,7 +65,7 @@ export class VaultEmbeddingsReader {
 
       return {
         noteId: data.noteId || noteId,
-        embedding: data.embedding,
+        embedding: data.vector || data.embedding,  // Vault Embeddings uses 'vector'
         model: data.model || 'unknown',
         updatedAt: data.updatedAt || new Date().toISOString(),
       };

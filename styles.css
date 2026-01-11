@@ -391,6 +391,31 @@
 }
 
 /* =============================================================================
+   Selection UI (Serendipity Cache)
+   ============================================================================= */
+
+.cdc-selection-container {
+  padding: 20px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.cdc-cache-info {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.cdc-selection-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* =============================================================================
    Error States
    ============================================================================= */
 

@@ -1,6 +1,7 @@
 /**
  * SerendipityModal
  * 전체 볼트에서 가장 창발적인 연결을 찾는 모달
+ * - 결과를 파일에 영구 저장하여 옵시디언 재시작 후에도 불러올 수 있음
  */
 
 import { Modal, App, Notice } from 'obsidian';
@@ -8,10 +9,14 @@ import type { CrossDomainConnection } from '../core/domain/entities/cross-domain
 import { getConnectionTypeLabel } from '../core/domain/entities/cross-domain-connection';
 import type { DiscoverConnectionsUseCase } from '../core/application/use-cases/discover-connections';
 import type { GenerateAnalogyUseCase } from '../core/application/use-cases/generate-analogy';
+import type CrossDomainConnectorPlugin from '../main';
 
 export class SerendipityModal extends Modal {
+  private resultsContainer: HTMLElement | null = null;
+
   constructor(
     app: App,
+    private plugin: CrossDomainConnectorPlugin,
     private discoverUseCase: DiscoverConnectionsUseCase,
     private analogyUseCase: GenerateAnalogyUseCase | null
   ) {
@@ -29,6 +34,78 @@ export class SerendipityModal extends Modal {
       text: 'Discover the most serendipitous connections across your entire vault.',
       cls: 'cdc-description',
     });
+
+    // 캐시된 결과 확인
+    const cache = await this.plugin.getSerendipityCache();
+
+    if (cache && cache.connections.length > 0) {
+      // 캐시가 있으면 선택 UI 표시
+      this.showSelectionUI(cache);
+    } else {
+      // 캐시가 없으면 바로 검색 시작
+      await this.performSearch();
+    }
+  }
+
+  /**
+   * 이전 결과 vs 새 검색 선택 UI
+   */
+  private showSelectionUI(cache: { connections: CrossDomainConnection[]; timestamp: number }): void {
+    const { contentEl } = this;
+
+    const selectionContainer = contentEl.createDiv({ cls: 'cdc-selection-container' });
+
+    // 이전 결과 정보
+    const cacheDate = new Date(cache.timestamp);
+    const timeAgo = this.getTimeAgo(cacheDate);
+
+    selectionContainer.createEl('p', {
+      text: `Previous results found (${cache.connections.length} connections, ${timeAgo})`,
+      cls: 'cdc-cache-info',
+    });
+
+    // 버튼 컨테이너
+    const buttonContainer = selectionContainer.createDiv({ cls: 'cdc-selection-buttons' });
+
+    // 이전 결과 불러오기 버튼
+    const loadPreviousBtn = buttonContainer.createEl('button', {
+      text: 'Load Previous Results',
+      cls: 'cdc-btn cdc-btn-primary',
+    });
+    loadPreviousBtn.onclick = () => {
+      selectionContainer.remove();
+      this.renderConnections(cache.connections);
+      new Notice(`Loaded ${cache.connections.length} cached connections`);
+    };
+
+    // 새로 검색 버튼
+    const newSearchBtn = buttonContainer.createEl('button', {
+      text: 'New Search',
+      cls: 'cdc-btn cdc-btn-secondary',
+    });
+    newSearchBtn.onclick = async () => {
+      selectionContainer.remove();
+      await this.performSearch();
+    };
+
+    // 캐시 삭제 버튼
+    const clearCacheBtn = buttonContainer.createEl('button', {
+      text: 'Clear Cache',
+      cls: 'cdc-btn cdc-btn-small',
+    });
+    clearCacheBtn.onclick = async () => {
+      await this.plugin.clearSerendipityCache();
+      selectionContainer.remove();
+      await this.performSearch();
+      new Notice('Cache cleared');
+    };
+  }
+
+  /**
+   * 검색 수행
+   */
+  private async performSearch(): Promise<void> {
+    const { contentEl } = this;
 
     // Loading indicator
     const loadingEl = contentEl.createEl('p', {
@@ -49,12 +126,19 @@ export class SerendipityModal extends Modal {
         return;
       }
 
+      // 결과를 캐시에 저장
+      await this.plugin.setSerendipityCache({
+        connections,
+        timestamp: Date.now(),
+      });
+
       contentEl.createEl('p', {
         text: `Found ${connections.length} serendipitous connections:`,
         cls: 'cdc-result-count',
       });
 
       this.renderConnections(connections);
+      new Notice(`Found ${connections.length} connections (saved to cache)`);
     } catch (error) {
       console.error('[CDC] Serendipity mode error:', error);
       loadingEl.remove();
@@ -69,10 +153,15 @@ export class SerendipityModal extends Modal {
    * 연결 목록 렌더링
    */
   private renderConnections(connections: CrossDomainConnection[]): void {
-    const listEl = this.contentEl.createDiv({ cls: 'cdc-serendipity-list' });
+    // 기존 결과 컨테이너 제거
+    if (this.resultsContainer) {
+      this.resultsContainer.remove();
+    }
+
+    this.resultsContainer = this.contentEl.createDiv({ cls: 'cdc-serendipity-list' });
 
     connections.forEach((conn, index) => {
-      const item = listEl.createDiv({ cls: 'cdc-serendipity-item' });
+      const item = this.resultsContainer!.createDiv({ cls: 'cdc-serendipity-item' });
 
       // Rank badge
       item.createEl('span', {
@@ -110,24 +199,24 @@ export class SerendipityModal extends Modal {
       // Actions
       const actions = item.createDiv({ cls: 'cdc-item-actions' });
 
-      // Open source
+      // Open source (모달 닫지 않음)
       const openSourceBtn = actions.createEl('button', {
         text: 'Open Source',
         cls: 'cdc-btn cdc-btn-small',
       });
       openSourceBtn.onclick = () => {
         this.app.workspace.openLinkText(conn.sourceNote.path, '', false);
-        this.close();
+        // 모달을 닫지 않고 노트만 열기
       };
 
-      // Open target
+      // Open target (모달 닫지 않음)
       const openTargetBtn = actions.createEl('button', {
         text: 'Open Target',
         cls: 'cdc-btn cdc-btn-small',
       });
       openTargetBtn.onclick = () => {
         this.app.workspace.openLinkText(conn.targetNote.path, '', false);
-        this.close();
+        // 모달을 닫지 않고 노트만 열기
       };
 
       // Generate analogy (if available)
@@ -168,7 +257,26 @@ export class SerendipityModal extends Modal {
     });
   }
 
+  /**
+   * 상대 시간 문자열 생성
+   */
+  private getTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+    return date.toLocaleDateString();
+  }
+
   onClose(): void {
     this.contentEl.empty();
+    this.resultsContainer = null;
   }
 }

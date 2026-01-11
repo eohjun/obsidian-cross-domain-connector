@@ -4,7 +4,7 @@
  */
 
 import { Plugin, TFile } from 'obsidian';
-import { CDCSettings, DEFAULT_SETTINGS, migrateSettings } from './types';
+import { CDCSettings, DEFAULT_SETTINGS, migrateSettings, SerendipityCache } from './types';
 
 // Views
 import { CDCMainView, VIEW_TYPE_CDC } from './views/main-view';
@@ -35,6 +35,8 @@ export default class CrossDomainConnectorPlugin extends Plugin {
   private classificationService!: DomainClassificationService;
   private discoverUseCase!: DiscoverConnectionsUseCase;
   private analogyUseCase: GenerateAnalogyUseCase | null = null;
+
+  // Serendipity 결과 캐시 (파일 기반 영구 저장)
 
   async onload(): Promise<void> {
     console.log('[CDC] Loading Cross-Domain Connector plugin');
@@ -77,6 +79,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
     this.registerView(VIEW_TYPE_CDC, (leaf) => {
       return new CDCMainView(
         leaf,
+        this,
         this.discoverUseCase,
         this.analogyUseCase
       );
@@ -191,6 +194,24 @@ export default class CrossDomainConnectorPlugin extends Plugin {
 
   async getEmbeddingCount(): Promise<number> {
     return this.embeddingsReader.getEmbeddingCount();
+  }
+
+  // Serendipity 캐시 관련 메서드 (파일 기반 영구 저장)
+  async getSerendipityCache(): Promise<SerendipityCache | null> {
+    const data = await this.loadData() as { serendipityCache?: SerendipityCache } | null;
+    return data?.serendipityCache || null;
+  }
+
+  async setSerendipityCache(cache: SerendipityCache): Promise<void> {
+    const data = (await this.loadData() || {}) as Record<string, unknown>;
+    data.serendipityCache = cache;
+    await this.saveData(data);
+  }
+
+  async clearSerendipityCache(): Promise<void> {
+    const data = (await this.loadData() || {}) as Record<string, unknown>;
+    delete data.serendipityCache;
+    await this.saveData(data);
   }
 
   private async activateView(): Promise<void> {
