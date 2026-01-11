@@ -71,6 +71,7 @@ export class DiscoverConnectionsUseCase {
     // Debug counters
     let skipSelf = 0, skipExcluded = 0, skipSameDomain = 0;
     let skipLowSimilarity = 0, skipLowSerendipity = 0, classifyErrors = 0;
+    let skipAlreadyLinked = 0;
 
     // 4. 각 노트와 비교
     for (const [targetNoteId, targetEmbedding] of allEmbeddings) {
@@ -93,6 +94,15 @@ export class DiscoverConnectionsUseCase {
           skipExcluded++;
           continue;
         }
+      }
+
+      // 소스 노트 경로 가져오기
+      const sourcePath = this.classificationService.getPathByNoteId(sourceNoteId);
+
+      // 이미 연결된 노트 제외 (Option A: 완전 제외)
+      if (sourcePath && targetPath && this.isAlreadyLinked(sourcePath, targetPath)) {
+        skipAlreadyLinked++;
+        continue;
       }
 
       try {
@@ -130,7 +140,7 @@ export class DiscoverConnectionsUseCase {
         const serendipityScore = SerendipityScore.calculate({
           similarity,
           domainDistance: domainDistance.value,
-          isAlreadyLinked: this.isAlreadyLinked(sourceNoteId, targetNoteId),
+          isAlreadyLinked: false, // 이미 위에서 연결된 노트는 제외했으므로 여기서는 항상 false
           genericTermsCount: this.countGenericTerms(targetNoteDomain),
         });
 
@@ -161,6 +171,7 @@ export class DiscoverConnectionsUseCase {
     console.log(`[CDC] === Discovery Summary ===`);
     console.log(`[CDC] Skip self: ${skipSelf}`);
     console.log(`[CDC] Skip excluded: ${skipExcluded}`);
+    console.log(`[CDC] Skip already linked: ${skipAlreadyLinked}`);
     console.log(`[CDC] Skip same domain: ${skipSameDomain}`);
     console.log(`[CDC] Skip low similarity: ${skipLowSimilarity}`);
     console.log(`[CDC] Skip low serendipity: ${skipLowSerendipity}`);
@@ -237,11 +248,12 @@ export class DiscoverConnectionsUseCase {
 
   /**
    * 이미 연결된 노트인지 확인
-   * TODO: 실제 링크 분석 구현
+   * linkChecker 함수를 사용하여 두 노트 경로 간 링크 존재 여부 확인
    */
-  private isAlreadyLinked(noteId1: string, noteId2: string): boolean {
-    // 현재는 간단히 false 반환
-    // 추후 vault 링크 분석으로 구현 가능
+  private isAlreadyLinked(path1: string, path2: string): boolean {
+    if (this.options.linkChecker) {
+      return this.options.linkChecker(path1, path2);
+    }
     return false;
   }
 

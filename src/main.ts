@@ -80,6 +80,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
         maxResults: this.settings.discovery.maxResults,
         excludeFolders: this.settings.discovery.excludeFolders,
         includeFolders: this.settings.discovery.includeFolders,
+        linkChecker: this.createLinkChecker(),
       }
     );
 
@@ -192,6 +193,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
         maxResults: this.settings.discovery.maxResults,
         excludeFolders: this.settings.discovery.excludeFolders,
         includeFolders: this.settings.discovery.includeFolders,
+        linkChecker: this.createLinkChecker(),
       }
     );
   }
@@ -210,6 +212,51 @@ export default class CrossDomainConnectorPlugin extends Plugin {
    */
   getLinkCreationService(): LinkCreationService {
     return this.linkCreationService;
+  }
+
+  /**
+   * 두 노트 경로 간 링크 존재 여부를 확인하는 LinkChecker 생성
+   * metadataCache를 사용하여 양방향 링크 확인
+   */
+  private createLinkChecker(): (path1: string, path2: string) => boolean {
+    return (path1: string, path2: string): boolean => {
+      const file1 = this.app.vault.getAbstractFileByPath(path1);
+      const file2 = this.app.vault.getAbstractFileByPath(path2);
+
+      if (!(file1 instanceof TFile) || !(file2 instanceof TFile)) {
+        return false;
+      }
+
+      // file1 → file2 링크 확인
+      const cache1 = this.app.metadataCache.getFileCache(file1);
+      if (cache1?.links) {
+        for (const link of cache1.links) {
+          const linkedFile = this.app.metadataCache.getFirstLinkpathDest(
+            link.link,
+            file1.path
+          );
+          if (linkedFile && linkedFile.path === file2.path) {
+            return true;
+          }
+        }
+      }
+
+      // file2 → file1 링크 확인 (양방향)
+      const cache2 = this.app.metadataCache.getFileCache(file2);
+      if (cache2?.links) {
+        for (const link of cache2.links) {
+          const linkedFile = this.app.metadataCache.getFirstLinkpathDest(
+            link.link,
+            file2.path
+          );
+          if (linkedFile && linkedFile.path === file1.path) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
   }
 
   // Serendipity 캐시 관련 메서드 (파일 기반 영구 저장)

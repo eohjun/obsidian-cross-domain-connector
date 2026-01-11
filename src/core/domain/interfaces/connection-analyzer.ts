@@ -27,6 +27,12 @@ export interface IConnectionAnalyzer {
 }
 
 /**
+ * 링크 체커 함수 타입
+ * 두 노트 경로 간에 링크가 있는지 확인
+ */
+export type LinkChecker = (path1: string, path2: string) => boolean;
+
+/**
  * 연결 분석 옵션
  */
 export interface ConnectionAnalysisOptions {
@@ -44,4 +50,7 @@ export interface ConnectionAnalysisOptions {
 
   /** 검색 대상 폴더 목록 (빈 배열이면 전체) */
   includeFolders: string[];
+
+  /** 링크 체커 함수 (이미 연결된 노트 제외용) */
+  linkChecker?: LinkChecker;
 }
