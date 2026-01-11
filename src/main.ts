@@ -4,7 +4,7 @@
  */
 
 import { Plugin, TFile } from 'obsidian';
-import { CDCSettings, DEFAULT_SETTINGS, migrateSettings, SerendipityCache, hydrateSerendipityCache } from './types';
+import { CDCSettings, DEFAULT_SETTINGS, migrateSettings, SerendipityCache, hydrateSerendipityCache, DeepSerendipityCache } from './types';
 
 // Views
 import { CDCMainView, VIEW_TYPE_CDC } from './views/main-view';
@@ -22,6 +22,7 @@ import { DomainClassificationService } from './core/application/services/domain-
 // Use Cases
 import { DiscoverConnectionsUseCase } from './core/application/use-cases/discover-connections';
 import { GenerateAnalogyUseCase } from './core/application/use-cases/generate-analogy';
+import { DeepSerendipityUseCase } from './core/application/use-cases/deep-serendipity';
 
 // Adapters
 import { VaultEmbeddingsReader } from './core/adapters/embeddings/vault-embeddings-reader';
@@ -38,6 +39,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
   private classificationService!: DomainClassificationService;
   private discoverUseCase!: DiscoverConnectionsUseCase;
   private analogyUseCase: GenerateAnalogyUseCase | null = null;
+  private deepSerendipityUseCase: DeepSerendipityUseCase | null = null;
   private linkCreationService!: LinkCreationService;
 
   // Serendipity 결과 캐시 (파일 기반 영구 저장)
@@ -67,6 +69,18 @@ export default class CrossDomainConnectorPlugin extends Plugin {
     if (this.settings.ai.apiKeys[this.settings.ai.provider]) {
       this.aiService = initializeAIService(this.settings.ai);
       this.analogyUseCase = new GenerateAnalogyUseCase(this.aiService);
+      this.deepSerendipityUseCase = new DeepSerendipityUseCase(
+        this.embeddingsReader,
+        this.classificationService,
+        this.aiService,
+        {
+          maxPairsToEvaluate: this.settings.discovery.deepMaxPairs,
+          minQualityScore: this.settings.discovery.deepMinQuality,
+          maxResults: this.settings.discovery.maxResults,
+          includeFolders: this.settings.discovery.includeFolders,
+          excludeFolders: this.settings.discovery.excludeFolders,
+        }
+      );
     }
 
     // Initialize discover connections use case
@@ -166,9 +180,23 @@ export default class CrossDomainConnectorPlugin extends Plugin {
         this.aiService = initializeAIService(this.settings.ai);
         this.analogyUseCase = new GenerateAnalogyUseCase(this.aiService);
       }
+      // Update or create Deep Serendipity use case
+      this.deepSerendipityUseCase = new DeepSerendipityUseCase(
+        this.embeddingsReader,
+        this.classificationService,
+        this.aiService,
+        {
+          maxPairsToEvaluate: this.settings.discovery.deepMaxPairs,
+          minQualityScore: this.settings.discovery.deepMinQuality,
+          maxResults: this.settings.discovery.maxResults,
+          includeFolders: this.settings.discovery.includeFolders,
+          excludeFolders: this.settings.discovery.excludeFolders,
+        }
+      );
     } else {
       this.aiService = null;
       this.analogyUseCase = null;
+      this.deepSerendipityUseCase = null;
       resetAIService();
     }
 
@@ -277,6 +305,32 @@ export default class CrossDomainConnectorPlugin extends Plugin {
   async clearSerendipityCache(): Promise<void> {
     const data = (await this.loadData() || {}) as Record<string, unknown>;
     delete data.serendipityCache;
+    await this.saveData(data);
+  }
+
+  // Deep Serendipity (LLM-First) 관련 메서드
+  /**
+   * DeepSerendipityUseCase 인스턴스 반환 (AI 서비스 필요)
+   */
+  getDeepSerendipityUseCase(): DeepSerendipityUseCase | null {
+    return this.deepSerendipityUseCase;
+  }
+
+  async getDeepSerendipityCache(): Promise<DeepSerendipityCache | null> {
+    const data = await this.loadData() as { deepSerendipityCache?: DeepSerendipityCache } | null;
+    if (!data?.deepSerendipityCache) return null;
+    return data.deepSerendipityCache;
+  }
+
+  async setDeepSerendipityCache(cache: DeepSerendipityCache): Promise<void> {
+    const data = (await this.loadData() || {}) as Record<string, unknown>;
+    data.deepSerendipityCache = cache;
+    await this.saveData(data);
+  }
+
+  async clearDeepSerendipityCache(): Promise<void> {
+    const data = (await this.loadData() || {}) as Record<string, unknown>;
+    delete data.deepSerendipityCache;
     await this.saveData(data);
   }
 

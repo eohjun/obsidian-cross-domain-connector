@@ -33,6 +33,9 @@ export interface DiscoverySettings {
   maxResults: number;           // 최대 결과 수 (기본 10)
   excludeFolders: string[];     // 제외 폴더
   includeFolders: string[];     // 검색 대상 폴더 (빈 배열이면 전체)
+  // Deep Serendipity (LLM-First) 설정
+  deepMaxPairs: number;         // LLM에 보낼 최대 쌍 수 (기본 30)
+  deepMinQuality: number;       // 최소 품질 점수 (기본 0.5)
 }
 
 export interface AdvancedSettings {
@@ -58,6 +61,8 @@ export const DEFAULT_SETTINGS: CDCSettings = {
     maxResults: 10,
     excludeFolders: ['templates', 'attachments', '09_Embedded'],
     includeFolders: ['04_Zettelkasten'],  // 기본: Zettelkasten 폴더만 검색
+    deepMaxPairs: 30,     // Deep 모드: LLM에 보낼 최대 쌍 수
+    deepMinQuality: 0.5,  // Deep 모드: 최소 품질 점수
   },
 
   advanced: {
@@ -110,6 +115,33 @@ import { DomainDistance } from './core/domain/value-objects/domain-distance';
 export interface SerendipityCache {
   connections: CrossDomainConnection[];
   timestamp: number;
+}
+
+// Deep Serendipity 결과 캐시 (LLM-First 모드용)
+export interface DeepSerendipityCache {
+  connections: DeepSerendipityCacheItem[];
+  timestamp: number;
+}
+
+export interface DeepSerendipityCacheItem {
+  sourceNote: {
+    noteId: string;
+    path: string;
+    title: string;
+    primaryDomain: string;
+    tags: string[];
+  };
+  targetNote: {
+    noteId: string;
+    path: string;
+    title: string;
+    primaryDomain: string;
+    tags: string[];
+  };
+  creativityScore: number;
+  analogy: string;
+  domainDistance: number;
+  discoveredAt: string;
 }
 
 /**

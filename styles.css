@@ -432,3 +432,126 @@
   background: var(--background-modifier-error);
   border-radius: 4px;
 }
+
+/* =============================================================================
+   Mode Toggle (Standard vs Deep)
+   ============================================================================= */
+
+.cdc-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.cdc-mode-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 2px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  margin: 0 4px;
+}
+
+.cdc-mode-btn:hover {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.cdc-mode-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.cdc-mode-active:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.cdc-mode-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cdc-mode-disabled:hover {
+  border-color: var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.cdc-mode-description {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* =============================================================================
+   Deep Mode Specific Styles
+   ============================================================================= */
+
+.cdc-deep-list {
+  border-left: 3px solid var(--color-purple);
+  padding-left: 10px;
+}
+
+.cdc-deep-item {
+  border-left: 2px solid var(--color-purple);
+}
+
+.cdc-rank-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.cdc-creativity-score {
+  font-size: 11px;
+  color: var(--color-purple);
+  font-weight: 600;
+}
+
+.cdc-domain-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+
+.cdc-domain-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--background-modifier-border);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cdc-domain-arrow {
+  color: var(--color-purple);
+  font-weight: bold;
+}
+
+.cdc-deep-analogy {
+  background: linear-gradient(135deg, var(--background-primary-alt) 0%, var(--background-secondary) 100%);
+  border-left-color: var(--color-purple);
+}
+
+.cdc-progress {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  margin-top: 8px;
+}
