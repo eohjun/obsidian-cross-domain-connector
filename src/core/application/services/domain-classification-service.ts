@@ -88,10 +88,11 @@ export class DomainClassificationService implements IDomainClassifier {
         primaryDomain = this.inferDomainFromPath(file.path);
         break;
       case 'cluster':
-        // 클러스터 기반은 임베딩이 필요하고 별도 구현 필요
-        primaryDomain =
-          this.inferDomainFromTags(tags) ||
-          this.inferDomainFromPath(file.path);
+        // 클러스터 기반: 각 노트를 고유 도메인으로 처리
+        // 이렇게 하면 "같은 도메인 스킵" 로직을 통과하고,
+        // 실제 도메인 거리는 태그 Jaccard로 계산됨
+        // 의미적으로 유사(임베딩)하면서 태그가 다른 연결이 발견됨
+        primaryDomain = `cluster_${noteId}`;
         break;
       default:
         primaryDomain = 'uncategorized';

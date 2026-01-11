@@ -3,9 +3,10 @@
  * AI 설정 섹션
  */
 
-import { Setting } from 'obsidian';
+import { Setting, Notice } from 'obsidian';
 import type CrossDomainConnectorPlugin from '../../../main';
 import type { AIProvider } from '../../../core/application/services/ai-service';
+import { testApiKey } from '../../../core/application/services/ai-service';
 import { PROVIDER_MODELS } from '../../../types';
 
 export class AISection {
@@ -61,7 +62,7 @@ export class AISection {
           });
       });
 
-    // API Key
+    // API Key with Test Button
     const apiKeyDesc = this.getApiKeyDescription(currentProvider);
     new Setting(this.containerEl)
       .setName(`${this.getProviderName(currentProvider)} API Key`)
@@ -75,6 +76,40 @@ export class AISection {
             await this.plugin.saveSettings();
           });
         text.inputEl.type = 'password';
+      })
+      .addButton((button) => {
+        button
+          .setButtonText('Test')
+          .setCta()
+          .onClick(async () => {
+            const apiKey = this.plugin.settings.ai.apiKeys[currentProvider];
+            if (!apiKey) {
+              new Notice('Please enter an API key first');
+              return;
+            }
+
+            button.setButtonText('Testing...');
+            button.setDisabled(true);
+
+            try {
+              const result = await testApiKey(
+                currentProvider,
+                apiKey,
+                this.plugin.settings.ai.model
+              );
+
+              if (result.success) {
+                new Notice(`✅ API key is valid! (${this.getProviderName(currentProvider)})`);
+              } else {
+                new Notice(`❌ API key test failed: ${result.error?.message || 'Unknown error'}`);
+              }
+            } catch (error) {
+              new Notice(`❌ Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            } finally {
+              button.setButtonText('Test');
+              button.setDisabled(false);
+            }
+          });
       });
 
     // API Key help link

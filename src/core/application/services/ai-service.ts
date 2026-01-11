@@ -171,4 +171,82 @@ export class AIService {
   hasApiKey(): boolean {
     return !!this.settings.apiKeys[this.settings.provider];
   }
+
+  /**
+   * API 키 유효성 테스트
+   * 간단한 API 호출로 키가 유효한지 확인
+   */
+  async testApiKey(): Promise<AIResponse> {
+    try {
+      const result = await this.provider.generate({
+        messages: [{ role: 'user', content: 'Hello' }],
+        maxTokens: 10,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          code: 'TEST_FAILED',
+        },
+      };
+    }
+  }
+}
+
+/**
+ * API 키 테스트 (설정 화면용)
+ * 임시 프로바이더를 생성해서 테스트
+ */
+export async function testApiKey(
+  provider: AIProvider,
+  apiKey: string,
+  model: string
+): Promise<AIResponse> {
+  if (!apiKey) {
+    return {
+      success: false,
+      error: {
+        message: 'API key is empty',
+        code: 'EMPTY_KEY',
+      },
+    };
+  }
+
+  let testProvider: BaseProvider;
+
+  try {
+    switch (provider) {
+      case 'claude':
+        testProvider = new ClaudeProvider(apiKey, model);
+        break;
+      case 'openai':
+        testProvider = new OpenAIProvider(apiKey, model);
+        break;
+      case 'gemini':
+        testProvider = new GeminiProvider(apiKey, model);
+        break;
+      case 'grok':
+        testProvider = new GrokProvider(apiKey, model);
+        break;
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+
+    const result = await testProvider.generate({
+      messages: [{ role: 'user', content: 'Say "OK" if you can read this.' }],
+      maxTokens: 10,
+    });
+
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'TEST_FAILED',
+      },
+    };
+  }
 }
