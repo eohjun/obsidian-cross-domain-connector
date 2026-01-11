@@ -1,7 +1,7 @@
 {
   "id": "cross-domain-connector",
   "name": "Cross-Domain Connector",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "minAppVersion": "1.0.0",
   "description": "Discover serendipitous connections between notes in different domains using embeddings and AI-powered analogy generation",
   "author": "eohjun",

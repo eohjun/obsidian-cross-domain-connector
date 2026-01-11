@@ -40,14 +40,20 @@ export class LinkCreationService {
     try {
       const content = await this.vault.read(sourceFile);
 
-      // '연결된 노트' 또는 '연결된 생각' 섹션 찾기
-      const sectionPattern = /^(##\s*연결된\s*(?:노트|생각))\s*$/m;
-      const match = content.match(sectionPattern);
+      // '연결된 노트' 섹션만 찾기 (우선순위: 연결된 노트 > 연결된 생각)
+      let sectionPattern = /^(##\s*연결된\s*노트)\s*$/m;
+      let match = content.match(sectionPattern);
+
+      // '연결된 노트'가 없으면 '연결된 생각' 시도
+      if (!match) {
+        sectionPattern = /^(##\s*연결된\s*생각)\s*$/m;
+        match = content.match(sectionPattern);
+      }
 
       if (!match) {
         return {
           success: false,
-          message: '노트에 "연결된 노트" 섹션을 찾을 수 없습니다.',
+          message: '노트에 "연결된 노트" 또는 "연결된 생각" 섹션을 찾을 수 없습니다.',
         };
       }
 
