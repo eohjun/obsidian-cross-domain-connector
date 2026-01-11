@@ -82,6 +82,24 @@ export class DiscoverySection {
           });
       });
 
+    // Include folders
+    new Setting(this.containerEl)
+      .setName('Include Folders')
+      .setDesc('Only search within these folders (comma-separated). Leave empty to search all.')
+      .addTextArea((text) => {
+        text
+          .setPlaceholder('04_Zettelkasten')
+          .setValue(this.plugin.settings.discovery.includeFolders.join(', '))
+          .onChange(async (value) => {
+            this.plugin.settings.discovery.includeFolders = value
+              .split(',')
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0);
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.rows = 2;
+      });
+
     // Exclude folders
     new Setting(this.containerEl)
       .setName('Exclude Folders')

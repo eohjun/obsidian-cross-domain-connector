@@ -68,6 +68,12 @@
   font-size: 12px;
 }
 
+.cdc-btn-success {
+  background: var(--color-green);
+  color: white;
+  border-color: var(--color-green);
+}
+
 /* =============================================================================
    Status
    ============================================================================= */
@@ -217,6 +223,7 @@
 .cdc-serendipity-modal {
   padding: 20px;
   max-width: 600px;
+  user-select: text;
 }
 
 .cdc-serendipity-modal h2 {

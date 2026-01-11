@@ -4,7 +4,7 @@
  * - 결과를 파일에 영구 저장하여 옵시디언 재시작 후에도 불러올 수 있음
  */
 
-import { Modal, App, Notice } from 'obsidian';
+import { Modal, App, Notice, TFile } from 'obsidian';
 import type { CrossDomainConnection } from '../core/domain/entities/cross-domain-connection';
 import { getConnectionTypeLabel } from '../core/domain/entities/cross-domain-connection';
 import type { DiscoverConnectionsUseCase } from '../core/application/use-cases/discover-connections';
@@ -240,6 +240,9 @@ export class SerendipityModal extends Modal {
             });
             analogyBtn.remove();
             new Notice('Analogy generated');
+
+            // Analogy 생성 후 '연결하기' 버튼 추가
+            this.addCreateLinkButton(actions, conn);
           } catch (error) {
             analogyBtn.textContent = 'Fail';
             analogyBtn.disabled = false;
@@ -247,14 +250,84 @@ export class SerendipityModal extends Modal {
         };
       }
 
-      // Show existing analogy
+      // Show existing analogy and '연결하기' button
       if (conn.analogy) {
         info.createEl('p', {
           text: conn.analogy,
           cls: 'cdc-analogy',
         });
+        // 이미 analogy가 있으면 연결하기 버튼 추가
+        this.addCreateLinkButton(actions, conn);
       }
     });
+  }
+
+  /**
+   * '연결하기' 버튼 추가
+   */
+  private addCreateLinkButton(
+    container: HTMLElement,
+    conn: CrossDomainConnection
+  ): void {
+    if (!conn.analogy) return;
+
+    const linkBtn = container.createEl('button', {
+      text: 'Create Link',
+      cls: 'cdc-btn cdc-btn-small cdc-btn-primary',
+    });
+    linkBtn.onclick = async () => {
+      linkBtn.disabled = true;
+      linkBtn.textContent = '...';
+
+      try {
+        const linkService = this.plugin.getLinkCreationService();
+
+        // 소스 노트 파일 찾기
+        const sourceFile = this.app.vault.getAbstractFileByPath(
+          conn.sourceNote.path
+        );
+        if (!sourceFile || !(sourceFile instanceof TFile)) {
+          new Notice('소스 노트를 찾을 수 없습니다.');
+          linkBtn.textContent = 'Create Link';
+          linkBtn.disabled = false;
+          return;
+        }
+
+        // 타겟 노트 파일 찾기
+        const targetFile = this.app.vault.getAbstractFileByPath(
+          conn.targetNote.path
+        );
+        if (!targetFile || !(targetFile instanceof TFile)) {
+          new Notice('타겟 노트를 찾을 수 없습니다.');
+          linkBtn.textContent = 'Create Link';
+          linkBtn.disabled = false;
+          return;
+        }
+
+        // 양방향 링크 생성
+        const result = await linkService.addBidirectionalLink(
+          sourceFile,
+          targetFile,
+          conn.analogy!
+        );
+
+        if (result.success) {
+          new Notice(result.message);
+          linkBtn.textContent = '✓ Linked';
+          linkBtn.disabled = true;
+          linkBtn.addClass('cdc-btn-success');
+        } else {
+          new Notice(result.message);
+          linkBtn.textContent = 'Create Link';
+          linkBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('[CDC] Link creation failed:', error);
+        new Notice('연결 생성에 실패했습니다.');
+        linkBtn.textContent = 'Create Link';
+        linkBtn.disabled = false;
+      }
+    };
   }
 
   /**

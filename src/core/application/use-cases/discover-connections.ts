@@ -80,11 +80,19 @@ export class DiscoverConnectionsUseCase {
         continue;
       }
 
-      // 제외 폴더 체크
+      // 폴더 필터링 체크
       const targetPath = this.classificationService.getPathByNoteId(targetNoteId);
-      if (targetPath && this.isExcludedPath(targetPath)) {
-        skipExcluded++;
-        continue;
+      if (targetPath) {
+        // includeFolders가 설정되어 있으면 해당 폴더만 포함
+        if (!this.isIncludedPath(targetPath)) {
+          skipExcluded++;
+          continue;
+        }
+        // excludeFolders 체크
+        if (this.isExcludedPath(targetPath)) {
+          skipExcluded++;
+          continue;
+        }
       }
 
       try {
@@ -261,6 +269,21 @@ export class DiscoverConnectionsUseCase {
     }
 
     return count;
+  }
+
+  /**
+   * 포함 대상 경로인지 확인
+   * includeFolders가 비어있으면 모든 경로 포함
+   */
+  private isIncludedPath(path: string): boolean {
+    if (!this.options.includeFolders || this.options.includeFolders.length === 0) {
+      return true; // 빈 배열이면 전체 포함
+    }
+
+    const pathLower = path.toLowerCase();
+    return this.options.includeFolders.some((folder) =>
+      pathLower.startsWith(folder.toLowerCase() + '/')
+    );
   }
 
   /**

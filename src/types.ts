@@ -32,6 +32,7 @@ export interface DiscoverySettings {
   minSerendipityScore: number;  // 최소 창발성 점수 (기본 0.4)
   maxResults: number;           // 최대 결과 수 (기본 10)
   excludeFolders: string[];     // 제외 폴더
+  includeFolders: string[];     // 검색 대상 폴더 (빈 배열이면 전체)
 }
 
 export interface AdvancedSettings {
@@ -56,6 +57,7 @@ export const DEFAULT_SETTINGS: CDCSettings = {
     minSerendipityScore: 0.4,
     maxResults: 10,
     excludeFolders: ['templates', 'attachments', '09_Embedded'],
+    includeFolders: ['04_Zettelkasten'],  // 기본: Zettelkasten 폴더만 검색
   },
 
   advanced: {
@@ -102,10 +104,43 @@ export const PROVIDER_MODELS: Record<AIProvider, ModelOption[]> = {
 // =============================================================================
 
 import type { CrossDomainConnection } from './core/domain/entities/cross-domain-connection';
+import { SerendipityScore } from './core/domain/value-objects/serendipity-score';
+import { DomainDistance } from './core/domain/value-objects/domain-distance';
 
 export interface SerendipityCache {
   connections: CrossDomainConnection[];
   timestamp: number;
+}
+
+/**
+ * JSON에서 로드한 plain object를 CrossDomainConnection으로 hydrate
+ * 클래스 인스턴스(SerendipityScore, DomainDistance, Date)를 복원
+ */
+export function hydrateConnection(plain: Record<string, unknown>): CrossDomainConnection {
+  const serendipityValue = (plain.serendipityScore as { value: number })?.value ?? 0;
+  const domainDistanceValue = (plain.domainDistance as { value: number })?.value ?? 0;
+
+  return {
+    sourceNote: plain.sourceNote as CrossDomainConnection['sourceNote'],
+    targetNote: plain.targetNote as CrossDomainConnection['targetNote'],
+    serendipityScore: SerendipityScore.fromValue(serendipityValue),
+    domainDistance: DomainDistance.fromValue(domainDistanceValue),
+    similarity: plain.similarity as number,
+    connectionType: plain.connectionType as CrossDomainConnection['connectionType'],
+    analogy: plain.analogy as string | undefined,
+    discoveredAt: new Date(plain.discoveredAt as string),
+  };
+}
+
+/**
+ * SerendipityCache를 hydrate
+ */
+export function hydrateSerendipityCache(plain: Record<string, unknown>): SerendipityCache {
+  const connections = (plain.connections as Record<string, unknown>[]) || [];
+  return {
+    connections: connections.map(hydrateConnection),
+    timestamp: plain.timestamp as number,
+  };
 }
 
 // =============================================================================

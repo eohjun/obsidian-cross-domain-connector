@@ -41,4 +41,7 @@ export interface ConnectionAnalysisOptions {
 
   /** 제외할 폴더 목록 */
   excludeFolders: string[];
+
+  /** 검색 대상 폴더 목록 (빈 배열이면 전체) */
+  includeFolders: string[];
 }

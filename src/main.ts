@@ -4,7 +4,7 @@
  */
 
 import { Plugin, TFile } from 'obsidian';
-import { CDCSettings, DEFAULT_SETTINGS, migrateSettings, SerendipityCache } from './types';
+import { CDCSettings, DEFAULT_SETTINGS, migrateSettings, SerendipityCache, hydrateSerendipityCache } from './types';
 
 // Views
 import { CDCMainView, VIEW_TYPE_CDC } from './views/main-view';
@@ -26,6 +26,9 @@ import { GenerateAnalogyUseCase } from './core/application/use-cases/generate-an
 // Adapters
 import { VaultEmbeddingsReader } from './core/adapters/embeddings/vault-embeddings-reader';
 
+// Link Creation
+import { LinkCreationService } from './core/application/services/link-creation-service';
+
 export default class CrossDomainConnectorPlugin extends Plugin {
   settings!: CDCSettings;
   settingTab: CDCSettingTab | null = null;
@@ -35,6 +38,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
   private classificationService!: DomainClassificationService;
   private discoverUseCase!: DiscoverConnectionsUseCase;
   private analogyUseCase: GenerateAnalogyUseCase | null = null;
+  private linkCreationService!: LinkCreationService;
 
   // Serendipity 결과 캐시 (파일 기반 영구 저장)
 
@@ -45,6 +49,9 @@ export default class CrossDomainConnectorPlugin extends Plugin {
 
     // Initialize adapters
     this.embeddingsReader = new VaultEmbeddingsReader(this.app.vault);
+
+    // Initialize link creation service
+    this.linkCreationService = new LinkCreationService(this.app.vault);
 
     // Initialize domain classification service
     this.classificationService = new DomainClassificationService(
@@ -72,6 +79,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
         minSerendipityScore: this.settings.discovery.minSerendipityScore,
         maxResults: this.settings.discovery.maxResults,
         excludeFolders: this.settings.discovery.excludeFolders,
+        includeFolders: this.settings.discovery.includeFolders,
       }
     );
 
@@ -183,6 +191,7 @@ export default class CrossDomainConnectorPlugin extends Plugin {
         minSerendipityScore: this.settings.discovery.minSerendipityScore,
         maxResults: this.settings.discovery.maxResults,
         excludeFolders: this.settings.discovery.excludeFolders,
+        includeFolders: this.settings.discovery.includeFolders,
       }
     );
   }
@@ -196,10 +205,20 @@ export default class CrossDomainConnectorPlugin extends Plugin {
     return this.embeddingsReader.getEmbeddingCount();
   }
 
+  /**
+   * LinkCreationService 인스턴스 반환
+   */
+  getLinkCreationService(): LinkCreationService {
+    return this.linkCreationService;
+  }
+
   // Serendipity 캐시 관련 메서드 (파일 기반 영구 저장)
   async getSerendipityCache(): Promise<SerendipityCache | null> {
-    const data = await this.loadData() as { serendipityCache?: SerendipityCache } | null;
-    return data?.serendipityCache || null;
+    const data = await this.loadData() as { serendipityCache?: Record<string, unknown> } | null;
+    if (!data?.serendipityCache) return null;
+
+    // JSON에서 로드한 plain object를 클래스 인스턴스로 hydrate
+    return hydrateSerendipityCache(data.serendipityCache);
   }
 
   async setSerendipityCache(cache: SerendipityCache): Promise<void> {
