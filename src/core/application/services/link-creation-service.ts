@@ -52,7 +52,9 @@ export class LinkCreationService {
       }
 
       // 새 링크 형식: [[노트제목]]• 연결 직관 — 연결 이유
-      const newLink = `- [[${linkInfo.targetTitle}]]• 연결 직관 — ${linkInfo.reason}`;
+      // analogy에서 줄바꿈 제거 (한 줄로 유지)
+      const cleanReason = linkInfo.reason.replace(/\n+/g, ' ').trim();
+      const newLink = `- [[${linkInfo.targetTitle}]] • 연결 직관 — ${cleanReason}`;
 
       // 이미 동일한 링크가 있는지 확인
       if (content.includes(`[[${linkInfo.targetTitle}]]`)) {
@@ -85,13 +87,11 @@ export class LinkCreationService {
         const lastLinkIndex = content.lastIndexOf(lastLink, sectionEndOffset);
         const insertPosition = lastLinkIndex + lastLink.length;
 
-        // 빈 줄 없이 바로 다음 줄에 추가
-        const afterInsert = content.substring(insertPosition);
         newContent =
           content.substring(0, insertPosition) +
           '\n' +
           newLink +
-          afterInsert.replace(/^\n/, '');
+          content.substring(insertPosition);
       } else {
         // 링크가 없으면 헤딩 다음에 추가
         newContent =
