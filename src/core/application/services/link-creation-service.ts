@@ -85,11 +85,13 @@ export class LinkCreationService {
         const lastLinkIndex = content.lastIndexOf(lastLink, sectionEndOffset);
         const insertPosition = lastLinkIndex + lastLink.length;
 
+        // 빈 줄 없이 바로 다음 줄에 추가
+        const afterInsert = content.substring(insertPosition);
         newContent =
           content.substring(0, insertPosition) +
           '\n' +
           newLink +
-          content.substring(insertPosition);
+          afterInsert.replace(/^\n/, '');
       } else {
         // 링크가 없으면 헤딩 다음에 추가
         newContent =
