@@ -62,15 +62,42 @@ export class LinkCreationService {
         };
       }
 
-      // 섹션 다음 위치 찾기
-      const sectionEnd = sectionIndex + CONNECTED_NOTES_HEADING.length;
+      // 섹션 범위 찾기
+      const afterHeading = sectionIndex + CONNECTED_NOTES_HEADING.length;
+      const remainingContent = content.substring(afterHeading);
 
-      // 섹션 다음 줄에 링크 추가
-      const newContent =
-        content.slice(0, sectionEnd) +
-        '\n' +
-        newLink +
-        content.slice(sectionEnd);
+      // 다음 섹션 경계 찾기 (## 또는 ### 헤딩)
+      const nextSectionMatch = remainingContent.match(/\n(#{2,3}\s)/);
+      const sectionEndOffset = nextSectionMatch
+        ? afterHeading + nextSectionMatch.index!
+        : content.length;
+
+      // 섹션 내 콘텐츠
+      const sectionContent = content.substring(afterHeading, sectionEndOffset);
+
+      // 마지막 링크 라인 찾기
+      const linkLines = sectionContent.match(/^- \[\[.+\]\].*$/gm);
+
+      let newContent: string;
+      if (linkLines && linkLines.length > 0) {
+        // 마지막 링크 다음에 추가
+        const lastLink = linkLines[linkLines.length - 1];
+        const lastLinkIndex = content.lastIndexOf(lastLink, sectionEndOffset);
+        const insertPosition = lastLinkIndex + lastLink.length;
+
+        newContent =
+          content.substring(0, insertPosition) +
+          '\n' +
+          newLink +
+          content.substring(insertPosition);
+      } else {
+        // 링크가 없으면 헤딩 다음에 추가
+        newContent =
+          content.substring(0, afterHeading) +
+          '\n\n' +
+          newLink +
+          content.substring(afterHeading).replace(/^\n+/, '\n');
+      }
 
       await this.vault.modify(sourceFile, newContent);
 
