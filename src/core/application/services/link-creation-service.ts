@@ -40,20 +40,14 @@ export class LinkCreationService {
     try {
       const content = await this.vault.read(sourceFile);
 
-      // '연결된 노트' 섹션만 찾기 (우선순위: 연결된 노트 > 연결된 생각)
-      let sectionPattern = /^(##\s*연결된\s*노트)\s*$/m;
-      let match = content.match(sectionPattern);
+      // '연결된 노트' 섹션 찾기 (PKM Note Recommender와 동일한 형식: ### 🔗 연결된 노트)
+      const CONNECTED_NOTES_HEADING = '### 🔗 연결된 노트';
+      const sectionIndex = content.indexOf(CONNECTED_NOTES_HEADING);
 
-      // '연결된 노트'가 없으면 '연결된 생각' 시도
-      if (!match) {
-        sectionPattern = /^(##\s*연결된\s*생각)\s*$/m;
-        match = content.match(sectionPattern);
-      }
-
-      if (!match) {
+      if (sectionIndex === -1) {
         return {
           success: false,
-          message: '노트에 "연결된 노트" 또는 "연결된 생각" 섹션을 찾을 수 없습니다.',
+          message: '노트에 "### 🔗 연결된 노트" 섹션을 찾을 수 없습니다.',
         };
       }
 
@@ -69,8 +63,7 @@ export class LinkCreationService {
       }
 
       // 섹션 다음 위치 찾기
-      const sectionIndex = content.indexOf(match[0]);
-      const sectionEnd = sectionIndex + match[0].length;
+      const sectionEnd = sectionIndex + CONNECTED_NOTES_HEADING.length;
 
       // 섹션 다음 줄에 링크 추가
       const newContent =
