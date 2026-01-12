@@ -3,7 +3,7 @@
  * 노트의 도메인을 분류하는 서비스
  */
 
-import type { Vault, TFile, CachedMetadata } from 'obsidian';
+import { normalizePath, TFile, type Vault, type CachedMetadata } from 'obsidian';
 import type { NoteDomain } from '../../domain/entities/note-domain';
 import type {
   IDomainClassifier,
@@ -56,11 +56,23 @@ export class DomainClassificationService implements IDomainClassifier {
 
   /**
    * noteId로 TFile 조회
+   * Cross-platform safe: normalizePath + 인덱스 폴백
    */
   getFileByNoteId(noteId: string): TFile | null {
     const path = this.noteIdToPath.get(noteId);
     if (!path) return null;
-    return this.vault.getAbstractFileByPath(path) as TFile | null;
+
+    const normalizedPath = normalizePath(path);
+
+    // 먼저 getAbstractFileByPath 시도
+    const file = this.vault.getAbstractFileByPath(normalizedPath);
+    if (file instanceof TFile) {
+      return file;
+    }
+
+    // iOS/Android 폴백: 파일 목록에서 직접 찾기
+    const allFiles = this.vault.getMarkdownFiles();
+    return allFiles.find(f => f.path === normalizedPath) || null;
   }
 
   /**

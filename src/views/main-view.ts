@@ -3,7 +3,7 @@
  * Cross-Domain Connector 메인 사이드바 뷰
  */
 
-import { ItemView, WorkspaceLeaf, Notice, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile, normalizePath } from 'obsidian';
 import type { CrossDomainConnection } from '../core/domain/entities/cross-domain-connection';
 import { getConnectionTypeLabel } from '../core/domain/entities/cross-domain-connection';
 import { generateNoteId } from '../core/domain/utils/note-id';
@@ -37,6 +37,25 @@ export class CDCMainView extends ItemView {
 
   getIcon(): string {
     return 'git-branch';
+  }
+
+  /**
+   * Cross-platform safe 파일 조회
+   * iOS/Android에서 getAbstractFileByPath가 null을 반환할 수 있어
+   * getMarkdownFiles()에서 폴백 검색
+   */
+  private getFileSafe(path: string): TFile | null {
+    const normalizedPath = normalizePath(path);
+
+    // 먼저 getAbstractFileByPath 시도
+    const file = this.app.vault.getAbstractFileByPath(normalizedPath);
+    if (file instanceof TFile) {
+      return file;
+    }
+
+    // iOS/Android 폴백: getMarkdownFiles에서 찾기
+    const allFiles = this.app.vault.getMarkdownFiles();
+    return allFiles.find(f => f.path === normalizedPath) || null;
   }
 
   async onOpen(): Promise<void> {
@@ -239,22 +258,17 @@ export class CDCMainView extends ItemView {
       try {
         const linkService = this.plugin.getLinkCreationService();
 
-        // 소스 노트 파일 찾기
-        const sourceFile = this.app.vault.getAbstractFileByPath(
-          conn.sourceNote.path
-        );
-        if (!sourceFile || !(sourceFile instanceof TFile)) {
+        // Cross-platform safe 파일 찾기
+        const sourceFile = this.getFileSafe(conn.sourceNote.path);
+        if (!sourceFile) {
           new Notice('소스 노트를 찾을 수 없습니다.');
           linkBtn.textContent = 'Create Link';
           linkBtn.disabled = false;
           return;
         }
 
-        // 타겟 노트 파일 찾기
-        const targetFile = this.app.vault.getAbstractFileByPath(
-          conn.targetNote.path
-        );
-        if (!targetFile || !(targetFile instanceof TFile)) {
+        const targetFile = this.getFileSafe(conn.targetNote.path);
+        if (!targetFile) {
           new Notice('타겟 노트를 찾을 수 없습니다.');
           linkBtn.textContent = 'Create Link';
           linkBtn.disabled = false;

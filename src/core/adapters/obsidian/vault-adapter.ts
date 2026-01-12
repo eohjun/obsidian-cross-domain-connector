@@ -37,11 +37,38 @@ export class VaultAdapter {
 
   /**
    * noteId로 TFile 조회
+   * Cross-platform safe: adapter 폴백 패턴 적용
    */
-  getFileByNoteId(noteId: string): TFile | null {
+  async getFileByNoteId(noteId: string): Promise<TFile | null> {
     const path = this.noteIdToPath.get(noteId);
     if (!path) return null;
-    return this.vault.getAbstractFileByPath(path) as TFile | null;
+    return this.getFileByPathSafe(path);
+  }
+
+  /**
+   * Cross-platform safe 파일 조회
+   * iOS/Android에서 getAbstractFileByPath가 null을 반환할 수 있어
+   * adapter.exists()로 폴백 확인 후 TFile 생성
+   */
+  async getFileByPathSafe(path: string): Promise<TFile | null> {
+    const normalizedPath = normalizePath(path);
+
+    // 먼저 getAbstractFileByPath 시도
+    const file = this.vault.getAbstractFileByPath(normalizedPath);
+    if (file instanceof TFile) {
+      return file;
+    }
+
+    // iOS/Android 폴백: adapter.exists()로 확인
+    const exists = await this.vault.adapter.exists(normalizedPath);
+    if (!exists) {
+      return null;
+    }
+
+    // 파일 존재하지만 getAbstractFileByPath 실패 시
+    // Vault의 파일 목록에서 찾기
+    const allFiles = this.vault.getMarkdownFiles();
+    return allFiles.find(f => f.path === normalizedPath) || null;
   }
 
   /**
@@ -67,6 +94,7 @@ export class VaultAdapter {
 
   /**
    * 경로로 파일 조회
+   * @deprecated Use getFileByPathSafe() for cross-platform compatibility
    */
   getFileByPath(path: string): TFile | null {
     const normalizedPath = normalizePath(path);

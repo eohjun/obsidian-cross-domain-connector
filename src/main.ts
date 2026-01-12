@@ -3,7 +3,7 @@
  * PKM 볼트에서 서로 다른 도메인의 노트 간 창발적 연결을 발견하는 플러그인
  */
 
-import { Plugin, TFile } from 'obsidian';
+import { Plugin, TFile, normalizePath } from 'obsidian';
 import { CDCSettings, DEFAULT_SETTINGS, migrateSettings, SerendipityCache, hydrateSerendipityCache, DeepSerendipityCache } from './types';
 
 // Views
@@ -245,11 +245,27 @@ export default class CrossDomainConnectorPlugin extends Plugin {
   /**
    * 두 노트 경로 간 링크 존재 여부를 확인하는 LinkChecker 생성
    * metadataCache를 사용하여 양방향 링크 확인
+   * Cross-platform safe: normalizePath + getMarkdownFiles 폴백
    */
   private createLinkChecker(): (path1: string, path2: string) => boolean {
     return (path1: string, path2: string): boolean => {
-      const file1 = this.app.vault.getAbstractFileByPath(path1);
-      const file2 = this.app.vault.getAbstractFileByPath(path2);
+      const normalizedPath1 = normalizePath(path1);
+      const normalizedPath2 = normalizePath(path2);
+
+      // Cross-platform safe: 먼저 getAbstractFileByPath 시도
+      let file1 = this.app.vault.getAbstractFileByPath(normalizedPath1);
+      let file2 = this.app.vault.getAbstractFileByPath(normalizedPath2);
+
+      // iOS/Android 폴백: getMarkdownFiles에서 찾기
+      if (!(file1 instanceof TFile) || !(file2 instanceof TFile)) {
+        const allFiles = this.app.vault.getMarkdownFiles();
+        if (!(file1 instanceof TFile)) {
+          file1 = allFiles.find(f => f.path === normalizedPath1) || null;
+        }
+        if (!(file2 instanceof TFile)) {
+          file2 = allFiles.find(f => f.path === normalizedPath2) || null;
+        }
+      }
 
       if (!(file1 instanceof TFile) || !(file2 instanceof TFile)) {
         return false;
