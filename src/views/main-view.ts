@@ -91,7 +91,8 @@ export class CDCMainView extends ItemView {
   }
 
   async onClose(): Promise<void> {
-    // Cleanup
+    this.resultsContainer = null;
+    this.statusEl = null;
   }
 
   /**

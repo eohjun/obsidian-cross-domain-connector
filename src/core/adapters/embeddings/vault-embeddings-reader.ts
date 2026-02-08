@@ -38,6 +38,10 @@ export interface NoteEmbedding {
 }
 
 export class VaultEmbeddingsReader {
+  private allEmbeddingsCache: Map<string, NoteEmbedding> | null = null;
+  private allEmbeddingsCacheTime = 0;
+  private readonly CACHE_TTL_MS = 60000; // 60s TTL
+
   constructor(private vault: Vault) {}
 
   /**
@@ -79,6 +83,12 @@ export class VaultEmbeddingsReader {
    * 모든 임베딩 가져오기
    */
   async getAllEmbeddings(): Promise<Map<string, NoteEmbedding>> {
+    // TTL cache: avoid repeated disk reads within same operation
+    const now = Date.now();
+    if (this.allEmbeddingsCache && now - this.allEmbeddingsCacheTime < this.CACHE_TTL_MS) {
+      return this.allEmbeddingsCache;
+    }
+
     const result = new Map<string, NoteEmbedding>();
 
     // 인덱스 읽기
@@ -106,7 +116,17 @@ export class VaultEmbeddingsReader {
     }
 
     console.log(`[CDC] Loaded ${result.size} embeddings`);
+    this.allEmbeddingsCache = result;
+    this.allEmbeddingsCacheTime = now;
     return result;
+  }
+
+  /**
+   * Clear all caches including TTL cache
+   */
+  clearAllCache(): void {
+    this.allEmbeddingsCache = null;
+    this.allEmbeddingsCacheTime = 0;
   }
 
   /**
