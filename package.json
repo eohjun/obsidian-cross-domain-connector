@@ -22,5 +22,8 @@
 		"esbuild": "^0.27.3",
 		"obsidian": "latest",
 		"typescript": "^5.7.3"
+	},
+	"dependencies": {
+		"obsidian-llm-shared": "github:eohjun/obsidian-llm-shared"
 	}
 }
