@@ -9,6 +9,7 @@ import { OpenAIProvider } from '../../adapters/llm/openai-provider';
 import { GeminiProvider } from '../../adapters/llm/gemini-provider';
 import { GrokProvider } from '../../adapters/llm/grok-provider';
 import { isReasoningModel } from '../../domain/constants/model-configs';
+import { requestUrl } from 'obsidian';
 
 export type AIProvider = 'claude' | 'openai' | 'gemini' | 'grok';
 
@@ -215,7 +216,6 @@ export async function testApiKey(
   }
 
   try {
-    const { requestUrl } = await import('obsidian');
     let valid = false;
 
     switch (provider) {
