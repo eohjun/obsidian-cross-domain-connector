@@ -197,12 +197,12 @@ export class AIService {
 
 /**
  * API 키 테스트 (설정 화면용)
- * 임시 프로바이더를 생성해서 테스트
+ * 경량 엔드포인트로 키 유효성만 검증 (모델 접근성과 분리)
  */
 export async function testApiKey(
   provider: AIProvider,
   apiKey: string,
-  model: string
+  _model: string
 ): Promise<AIResponse> {
   if (!apiKey) {
     return {
@@ -214,32 +214,60 @@ export async function testApiKey(
     };
   }
 
-  let testProvider: BaseProvider;
-
   try {
+    const { requestUrl } = await import('obsidian');
+    let valid = false;
+
     switch (provider) {
-      case 'claude':
-        testProvider = new ClaudeProvider(apiKey, model);
+      case 'openai': {
+        const res = await requestUrl({
+          url: 'https://api.openai.com/v1/models',
+          method: 'GET',
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        valid = Array.isArray(res.json?.data);
         break;
-      case 'openai':
-        testProvider = new OpenAIProvider(apiKey, model);
+      }
+      case 'claude': {
+        const res = await requestUrl({
+          url: 'https://api.anthropic.com/v1/models',
+          method: 'GET',
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+        });
+        valid = Array.isArray(res.json?.data);
         break;
-      case 'gemini':
-        testProvider = new GeminiProvider(apiKey, model);
+      }
+      case 'gemini': {
+        const res = await requestUrl({
+          url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+          method: 'GET',
+        });
+        valid = Array.isArray(res.json?.models);
         break;
-      case 'grok':
-        testProvider = new GrokProvider(apiKey, model);
+      }
+      case 'grok': {
+        const res = await requestUrl({
+          url: 'https://api.x.ai/v1/models',
+          method: 'GET',
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        valid = Array.isArray(res.json?.data);
         break;
+      }
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
 
-    const result = await testProvider.generate({
-      messages: [{ role: 'user', content: 'Say "OK" if you can read this.' }],
-      maxTokens: 10,
-    });
-
-    return result;
+    if (valid) {
+      return { success: true, content: 'API key is valid' };
+    }
+    return {
+      success: false,
+      error: { message: 'Unexpected response from API', code: 'INVALID_RESPONSE' },
+    };
   } catch (error) {
     return {
       success: false,

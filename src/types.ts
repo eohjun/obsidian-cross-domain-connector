@@ -52,7 +52,7 @@ export const DEFAULT_SETTINGS: CDCSettings = {
   ai: {
     provider: 'openai',
     apiKeys: {},
-    model: 'gpt-5-nano',
+    model: 'gpt-5.4-nano',
   },
 
   discovery: {
@@ -86,12 +86,12 @@ export const PROVIDER_MODELS: Record<AIProvider, ModelOption[]> = {
   claude: [
     { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: 'Highest quality' },
     { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', description: 'Balanced' },
-    { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', description: 'Fast' },
+    { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', description: 'Fast' },
   ],
   openai: [
     { id: 'gpt-5.4', name: 'GPT-5.4', description: 'Latest flagship (Reasoning)' },
-    { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Standard (Reasoning)' },
-    { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fast & economical' },
+    { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', description: 'Standard (Reasoning)' },
+    { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano', description: 'Fast & economical' },
   ],
   gemini: [
     { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', description: 'Highest quality' },
@@ -208,7 +208,11 @@ export function migrateSettings(oldSettings: Partial<CDCSettings>): CDCSettings 
   return {
     ...DEFAULT_SETTINGS,
     ...oldSettings,
-    ai: { ...DEFAULT_SETTINGS.ai, ...oldSettings.ai },
+    ai: {
+      ...DEFAULT_SETTINGS.ai,
+      ...oldSettings.ai,
+      apiKeys: { ...DEFAULT_SETTINGS.ai.apiKeys, ...(oldSettings.ai?.apiKeys || {}) },
+    },
     discovery: { ...DEFAULT_SETTINGS.discovery, ...oldSettings.discovery },
     advanced: { ...DEFAULT_SETTINGS.advanced, ...oldSettings.advanced },
   };
