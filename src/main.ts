@@ -166,7 +166,11 @@ export default class CrossDomainConnectorPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const data = await this.loadData();
+    const previousModel = (data as Partial<CDCSettings> | null)?.ai?.model;
     this.settings = migrateSettings(data || {});
+    if (previousModel && previousModel !== this.settings.ai.model) {
+      await this.saveData(this.settings);
+    }
   }
 
   async saveSettings(): Promise<void> {

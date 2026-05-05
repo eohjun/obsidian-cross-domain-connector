@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-cross-domain-connector",
-	"version": "0.2.16",
+	"version": "0.2.17",
 	"description": "Discover serendipitous connections between notes in different domains",
 	"main": "main.js",
 	"scripts": {
