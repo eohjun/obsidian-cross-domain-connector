@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-cross-domain-connector",
-	"version": "0.2.18",
+	"version": "0.2.19",
 	"description": "Discover serendipitous connections between notes in different domains",
 	"main": "main.js",
 	"scripts": {
@@ -23,7 +23,7 @@
 		"@types/node": "^22.10.7",
 		"esbuild": "^0.27.3",
 		"obsidian": "latest",
-		"obsidian-llm-shared": "github:eohjun/obsidian-llm-shared#v1.4.0",
+		"obsidian-llm-shared": "github:eohjun/obsidian-llm-shared#v1.4.1",
 		"typescript": "^6.0.2"
 	}
 }
